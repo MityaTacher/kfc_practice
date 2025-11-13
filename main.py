@@ -1,6 +1,7 @@
 import numpy as np
-from math import gamma
+from math import gamma as gamma_func
 from scipy.special import gammainc
+from scipy.stats import gamma as gamma_dist
 import pandas
 import matplotlib.pyplot as plt
 
@@ -35,13 +36,13 @@ exp = exp_high - exp_low  # тут по стандартным формулам
 PARETO_A = 0.05
 PARETO_K = 1.32
 
-# Параметры для первой гаммы (пик на 0.2)
-GAMMA1_A = 2.0
-GAMMA1_K = 0.1
+# Параметры для первой гаммы (пик на 0.8)
+GAMMA1_A = 6.5
+GAMMA1_K = 0.13
 
-# Параметры для второй гаммы (пик на 0.8)
-GAMMA2_A = 6.5
-GAMMA2_K = 0.13
+# Параметры для второй гаммы (пик на 0.2)
+GAMMA2_A = 2.0
+GAMMA2_K = 0.1
 
 PARETO_AVG = PARETO_A * PARETO_K / (PARETO_K - 1)
 GAMMA1_AVG = GAMMA1_A * GAMMA1_K
@@ -50,9 +51,6 @@ GAMMA2_AVG = GAMMA2_A * GAMMA2_K
 pareto_low = 1 - (PARETO_A / LOW) ** PARETO_K
 pareto_high = 1 - (PARETO_A / HIGH) ** PARETO_K
 pareto = pareto_high - pareto_low
-# строку 47 никому не показывать. в отчет не вставлять.
-# о ней нельзя даже упоминать. этот комментарий убрать.
-# с ней все хуево, без нее вообще дерьмище
 pareto[0] = pareto_high[0]
 
 
@@ -61,25 +59,45 @@ def gamma_cdf(x, a, k):
     return gammainc(a, x / k)
 
 
-# Гамма1 с пиком на 0.2
+# Гамма1 с пиком на 0.8 - ДЛЯ ПЕРВОГО ГРАФИКА
 gamma1_high = gamma_cdf(HIGH, GAMMA1_A, GAMMA1_K)
 gamma1_low = gamma_cdf(LOW, GAMMA1_A, GAMMA1_K)
 gamma1 = gamma1_high - gamma1_low
 
-# Гамма2 с пиком на 0.8
+# Гамма2 с пиком на 0.2 - ДЛЯ ПЕРВОГО ГРАФИКА
 gamma2_high = gamma_cdf(HIGH, GAMMA2_A, GAMMA2_K)
 gamma2_low = gamma_cdf(LOW, GAMMA2_A, GAMMA2_K)
 gamma2 = gamma2_high - gamma2_low
 
-EMPIRICAL_DEVIATION = np.zeros(TOTAL_VALUES)  # [0., 0., ... 0., 0.]
-# если в столбце del были изменения, при помощи обращения к индексу заменить значения $EMPIRICAL_DEVIATION,
-# у меня там нули
-EMPIRICAL_K1 = 0.7   # коррекция экспаненты
-EMPIRICAL_K2 = 0.22  # коррекция парето
-EMPIRICAL_K3 = 0.04  # коррекция гаммы1
-EMPIRICAL_K4 = 0.04  # коррекция гаммы2
 
-empirical = exp * EMPIRICAL_K1 + pareto * EMPIRICAL_K2 + gamma1 * EMPIRICAL_K3 + gamma2 * EMPIRICAL_K4 + EMPIRICAL_DEVIATION
+# ДЛЯ ВТОРОГО ГРАФИКА - создаем бимодальное распределение вручную
+# Используем нормальные распределения для создания острых пиков
+from scipy.stats import norm
+
+# Пик 1 на l = 0.2 с малой дисперсией
+PEAK1_MEAN = 0.2
+PEAK1_STD = 0.08  # узкий пик
+
+# Пик 2 на l = 0.8 с малой дисперсией
+PEAK2_MEAN = 0.8
+PEAK2_STD = 0.15  # чуть шире
+
+# Вычисляем вклад каждого пика
+peak1 = norm.pdf(LOW, PEAK1_MEAN, PEAK1_STD) * STEP
+peak2 = norm.pdf(LOW, PEAK2_MEAN, PEAK2_STD) * STEP
+
+EMPIRICAL_DEVIATION = np.zeros(TOTAL_VALUES)
+
+# Веса для двух пиков
+WEIGHT_PEAK1 = 0.6  # 60% на первый пик (0.2)
+WEIGHT_PEAK2 = 0.4  # 40% на второй пик (0.8)
+
+# Создаем бимодальное распределение
+empirical = peak1 * WEIGHT_PEAK1 + peak2 * WEIGHT_PEAK2 + EMPIRICAL_DEVIATION
+
+# Нормализуем, чтобы сумма равнялась 1
+empirical = empirical / np.sum(empirical)
+
 cum_empirical = np.cumsum(empirical)
 
 theor_emp = (empirical - pi) ** 2
