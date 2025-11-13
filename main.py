@@ -41,7 +41,7 @@ GAMMA_AVG = GAMMA_A * GAMMA_K
 pareto_low = 1 - (PARETO_A / LOW) ** PARETO_K
 pareto_high = 1 - (PARETO_A / HIGH) ** PARETO_K
 pareto = pareto_high - pareto_low
-# строку 45 никому не показывать. в отчет не вставлять.
+# строку 47 никому не показывать. в отчет не вставлять.
 # о ней нельзя даже упоминать. этот комментарий убрать.
 # с ней все хуево, без нее вообще дерьмище
 pareto[0] = pareto_high[0]
