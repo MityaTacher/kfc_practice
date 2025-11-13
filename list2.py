@@ -80,15 +80,12 @@ TIME_ARRAY = TIME_ARRAY[TIME_ARRAY != 0]
 
 # --- новые интервалы ---
 m_values = [2 ** i for i in range(2, 18)]  # длины блоков
-RS_values = []  # сюда будем писать средние R/S для каждого m
+disp_values = []  # сюда будем писать средние disp для каждого m
 
 
 # --- функция для расчёта R/S для блока длины m ---
 def nay(data_: np.ndarray, rows: int) -> np.floating:
-    """
-    Разбивает временной ряд на непересекающиеся блоки длины rows
-    и считает среднее значение R/S по всем блокам.
-    """
+
     n = len(data_)
     if rows >= n:
         raise ValueError("rows слишком велико, меньше длины ряда нужно")
@@ -112,13 +109,13 @@ def nay(data_: np.ndarray, rows: int) -> np.floating:
 # --- основная петля по m ---
 for m in m_values:
     RS = nay(TIME_ARRAY, rows=m)
-    RS_values.append(RS)
+    disp_values.append(RS)
 
-RS_values = np.array(RS_values)
+disp_values = np.array(disp_values)
 
 # --- логарифмирование и аппроксимация ---
 log_m = np.log10(m_values)
-log_RS = np.log10(RS_values)
+log_RS = np.log10(disp_values)
 
 k, b = np.polyfit(log_m, log_RS, 1)  # линейная регрессия
 H_my = k
@@ -145,7 +142,7 @@ print(f"hurst: H={H_lib:.4f}, c={c_lib:.4f}")
 # --- сравнение графиков ---
 plt.figure()
 plt.loglog(data[0], data[1], 'o-', label='hurst.compute_Hc')
-plt.loglog(m_values, RS_values, 's-', label='my R/S')
+plt.loglog(m_values, disp_values, 's-', label='my R/S')
 plt.loglog(m_values, c_my * np.array(m_values) ** H_my, '--', label='my fit')
 plt.loglog(data[0], c_lib * np.array(data[0]) ** H_lib, ':', label='hurst fit')
 plt.legend()

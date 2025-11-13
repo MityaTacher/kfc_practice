@@ -74,10 +74,12 @@ print(f'RMSE_PDF: {RMSE_PDF}\nRMSE_CDF: {RMSE_CDF}')
 
 # далее чисто графики
 LINE_WIDTH = 3
-BAR_WIDTH = 0.4
+BAR_WIDTH = 0.05
 
 plt.figure(figsize=(13, 5))
 plt.gcf().canvas.manager.set_window_title("Rostics")
+
+COUNTER = COUNTER / 10
 
 plt.subplot(1, 2, 1)
 plt.bar(COUNTER, pi, label='pi', color='#5b9bd5', width=BAR_WIDTH)
