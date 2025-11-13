@@ -1,18 +1,19 @@
 import numpy as np
 from math import gamma
+from scipy.special import gammainc
 import pandas
 import matplotlib.pyplot as plt
 
 print("Боже, храни нумпай")
 
 # Берем только столбец Time
-dataframe = pandas.read_csv("data/data.csv").iloc[:, 1].to_list()
+dataframe = pandas.read_csv("data/123.csv").iloc[:, 1].to_list()
 TIME_ARRAY = np.array(dataframe)
 TOTAL_LENGHT = len(TIME_ARRAY)
 del dataframe
 
 # да начнется пиздец
-STEP = 0.1
+STEP = 0.05
 TOTAL_VALUES = 30
 COUNTER = np.arange(TOTAL_VALUES)
 LOW = COUNTER * STEP
@@ -33,10 +34,18 @@ exp = exp_high - exp_low  # тут по стандартным формулам
 
 PARETO_A = 0.05
 PARETO_K = 1.32
-GAMMA_A = 6.5
-GAMMA_K = 0.2
+
+# Параметры для первой гаммы (пик на 0.2)
+GAMMA1_A = 2.0
+GAMMA1_K = 0.1
+
+# Параметры для второй гаммы (пик на 0.8)
+GAMMA2_A = 6.5
+GAMMA2_K = 0.13
+
 PARETO_AVG = PARETO_A * PARETO_K / (PARETO_K - 1)
-GAMMA_AVG = GAMMA_A * GAMMA_K
+GAMMA1_AVG = GAMMA1_A * GAMMA1_K
+GAMMA2_AVG = GAMMA2_A * GAMMA2_K
 
 pareto_low = 1 - (PARETO_A / LOW) ** PARETO_K
 pareto_high = 1 - (PARETO_A / HIGH) ** PARETO_K
@@ -47,21 +56,30 @@ pareto = pareto_high - pareto_low
 pareto[0] = pareto_high[0]
 
 
-def gamma_func(x, a, k):
-    return (x ** (a - 1) * np.exp(-x / k)) / (gamma(a) * k ** a)
+def gamma_cdf(x, a, k):
+    """Кумулятивная функция распределения гаммы (CDF)"""
+    return gammainc(a, x / k)
 
 
-gamma1 = gamma_func(HIGH, GAMMA_A, GAMMA_K)  # у меня гамма одна, если у тебя две, добавляй вторую
-# либо хуй забей
+# Гамма1 с пиком на 0.2
+gamma1_high = gamma_cdf(HIGH, GAMMA1_A, GAMMA1_K)
+gamma1_low = gamma_cdf(LOW, GAMMA1_A, GAMMA1_K)
+gamma1 = gamma1_high - gamma1_low
+
+# Гамма2 с пиком на 0.8
+gamma2_high = gamma_cdf(HIGH, GAMMA2_A, GAMMA2_K)
+gamma2_low = gamma_cdf(LOW, GAMMA2_A, GAMMA2_K)
+gamma2 = gamma2_high - gamma2_low
 
 EMPIRICAL_DEVIATION = np.zeros(TOTAL_VALUES)  # [0., 0., ... 0., 0.]
 # если в столбце del были изменения, при помощи обращения к индексу заменить значения $EMPIRICAL_DEVIATION,
 # у меня там нули
 EMPIRICAL_K1 = 0.7   # коррекция экспаненты
 EMPIRICAL_K2 = 0.22  # коррекция парето
-EMPIRICAL_K3 = 0.08  # коррекция гаммы
+EMPIRICAL_K3 = 0.04  # коррекция гаммы1
+EMPIRICAL_K4 = 0.04  # коррекция гаммы2
 
-empirical = exp * EMPIRICAL_K1 + pareto * EMPIRICAL_K2 + gamma1 * EMPIRICAL_K3 + EMPIRICAL_DEVIATION
+empirical = exp * EMPIRICAL_K1 + pareto * EMPIRICAL_K2 + gamma1 * EMPIRICAL_K3 + gamma2 * EMPIRICAL_K4 + EMPIRICAL_DEVIATION
 cum_empirical = np.cumsum(empirical)
 
 theor_emp = (empirical - pi) ** 2
@@ -74,26 +92,27 @@ print(f'RMSE_PDF: {RMSE_PDF}\nRMSE_CDF: {RMSE_CDF}')
 
 # далее чисто графики
 LINE_WIDTH = 3
-BAR_WIDTH = 0.05
+BAR_WIDTH = 0.025
 
 plt.figure(figsize=(13, 5))
 plt.gcf().canvas.manager.set_window_title("Rostics")
 
-COUNTER = COUNTER / 10
+# Используем LOW для оси X
+X_AXIS = LOW
 
 plt.subplot(1, 2, 1)
-plt.bar(COUNTER, pi, label='pi', color='#5b9bd5', width=BAR_WIDTH)
-plt.plot(COUNTER, exp, label="exp", color='#ed7d31', lw=LINE_WIDTH)
-plt.plot(COUNTER, pareto, label="pareto", color='#00b050', lw=LINE_WIDTH)
-plt.plot(COUNTER, gamma1, label="gamma", color='#ffc000', lw=LINE_WIDTH)
+plt.bar(X_AXIS, pi, label='pi', color='#5b9bd5', width=BAR_WIDTH)
+plt.plot(X_AXIS, exp, label="exp", color='#ed7d31', lw=LINE_WIDTH)
+plt.plot(X_AXIS, pareto, label="pareto", color='#00b050', lw=LINE_WIDTH)
+plt.plot(X_AXIS, gamma1, label="gamma1", color='#ffc000', lw=LINE_WIDTH)
+plt.plot(X_AXIS, gamma2, label="gamma2", color='#a020f0', lw=LINE_WIDTH)
 plt.grid()
 plt.legend()
 
 plt.subplot(1, 2, 2)
-plt.bar(COUNTER, pi, label='pi', color='#5b9bd5', width=BAR_WIDTH)
-plt.plot(COUNTER, empirical, color='black', label='emp', lw=LINE_WIDTH)
+plt.bar(X_AXIS, pi, label='pi', color='#5b9bd5', width=BAR_WIDTH)
+plt.plot(X_AXIS, empirical, color='black', label='emp', lw=LINE_WIDTH)
 plt.grid()
 plt.legend()
 
 plt.show()
-
